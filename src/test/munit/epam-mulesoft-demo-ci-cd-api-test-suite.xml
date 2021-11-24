@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="epam-mulesoft-demo-ci-cd-api-test-suite.xml" />
+	<munit:test name="epam-mulesoft-demo-ci-cd-api-test-suite-epam-mulesoft-demo-ci-cd-apiFlowTest" doc:id="9e57593c-87c5-4bc1-8a86-cb5c112ed3a5" description="Test">
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to epam-mulesoft-demo-ci-cd-apiFlow" doc:id="22faa5b7-fa53-4555-a773-3587c5fe9268" name="epam-mulesoft-demo-ci-cd-apiFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify call" doc:id="87d3b35e-a974-42b7-9edf-da4fd1974a6d" processor="ee:transform" atLeast="1">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Transform Message" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="06d26e3d-3a91-465e-b8c7-f8de98769eca" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
