@@ -16,7 +16,8 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 output application/json
 ---
 {
-	message: now()
+	message: "ok",
+	date_time: now()
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
