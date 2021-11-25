@@ -109,38 +109,8 @@ jobs:
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: target/*.jar
-  test:
-    needs: build
-   # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - name: Cache Maven packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      # Create file settings.xml for maven
-      - name: maven-settings-xml-action
-        uses: whelk-io/maven-settings-xml-action@v18
-        with:
-          repositories: '[{"id": "MuleEE-Repository","name": "MuleEE-Repository","url": "https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/","layout": "default","releases": {"enabled": "true"},"snapshots": {"enabled": "true"}}]'
-          servers: '[{"id": "MuleEE-Repository","username": "${repo.userName}","password": "${repo.password}"}]'
-          profiles: '[{"id": "MuleEE-Repository","activation": {"activeByDefault": "true"}}]'
-          output_file: .m2/settings.xml
-      # Runs tests
-      - name: Test
-        env:
-          USERNAME: ${{ secrets.repo_user_name }}
-          PASSWORD: ${{ secrets.repo_password }}
-          ENV: dev
-          PROPERTY_KEY: ${{ secrets.property_key }}
-        run: mvn test -file pom.xml -s .m2/settings.xml -Drepo.userName="$USERNAME" -Drepo.password="$PASSWORD" -Denv="$ENV" -Dproperty.key="$PROPERTY_KEY"
   deploy:
-    needs: test
+    needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
@@ -186,18 +156,24 @@ jobs:
       - name: Echo
         run: echo $STATUS
       - name: Checks error
-        if: "contains(env.STATUS, 'Error') && !contains(env.STATUS, 'No application with domain')"
-        run: anypoint-cli --username=$USERNAME --password=$PASSWORD  --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe "${CLOUD_ENV}-${APP_NAME}"
+        if: "contains(env.STATUS, 'Error:') && !contains(env.STATUS, 'No application with domain')"
+        run: exit 1
       # Deploy new application
       - name: Application doesn't exist
-        if: "contains(env.STATUS, 'Error') && contains(env.STATUS, 'No application with domain')"
+        if: contains(env.STATUS, 'No application with domain')
         run: |
             echo "Doesn't exist"
             artifactName=$(ls *.jar | head -1)
             anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application deploy --workerSize $WORKER_SIZE --region $REGION --workers $WORKERS --property "property.key:${PROPERTY_KEY}" --property "env:${CLOUD_ENV}" "${CLOUD_ENV}-${APP_NAME}" $artifactName
       # Modify existing application
-      - name: Application exists
-        if: "!contains(env.STATUS, 'Error')"
+      - name: Application exists I
+        if: github.event.inputs.workers != null && !contains(env.STATUS, 'Error:')
+        run: |
+            echo "Exists"
+            artifactName=$(ls *.jar | head -1)
+            anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application modify "${CLOUD_ENV}-${APP_NAME}" $artifactName
+      - name: Application exists II
+        if: github.event.inputs.workers == null && !contains(env.STATUS, 'Error:')
         run: |
             echo "Exists"
             artifactName=$(ls *.jar | head -1)
