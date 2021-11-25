@@ -158,6 +158,13 @@ jobs:
       - name: Checks error
         if: "contains(env.STATUS, 'Error:') && !contains(env.STATUS, 'No application with domain')"
         run: exit 1
+      # Checks input parameters
+      - name: Checks input parameters
+        if: github.event.inputs.workers == null || github.event.inputs.workerSize == null || github.event.inputs.region == null
+        run: |
+            echo "WORKERS=1" >> $GITHUB_ENV
+            echo "WORKER_SIZE=0.1" >> $GITHUB_ENV
+            echo "REGION=us-east-1" >> $GITHUB_ENV
       # Deploy new application
       - name: Application doesn't exist
         if: contains(env.STATUS, 'No application with domain')
