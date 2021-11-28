@@ -222,7 +222,7 @@ jobs:
                 echo error exit
                 exit 1
               fi
-              if [[ $response == *"STARTED"* || $response == *"UNDEPLOYED"* ]]; then
+              if [[ $response == *"STARTED"* ]]; then
                 echo normal exit
                 break
               fi
