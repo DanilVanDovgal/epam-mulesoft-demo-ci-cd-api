@@ -185,10 +185,11 @@ jobs:
       # Log STATUS
       - name: Echo
         run: echo $STATUS
+      # Stop the process in case of 'Error: User unauthorized to access requested resource' or 'Error: Unauthorized' or 'Error: Organization not found' or 'Error: Environment not found'
       - name: Checks error
         if: "contains(env.STATUS, 'Error:') && !contains(env.STATUS, 'No application with domain')"
         run: exit 1
-      # Checks input parameters
+      # Checks input parameters. We need this section in case if this flow will automatically run on push operation to dev branch the first time (when this application doesn't exist in CloudHub).
       - name: Checks input parameters
         if: github.event.inputs.workers == null || github.event.inputs.workerSize == null || github.event.inputs.region == null
         run: |

@@ -10,6 +10,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	</http:listener-config>
 	<flow name="epam-mulesoft-demo-ci-cd-apiFlow" doc:id="fd8f98cd-7526-4867-aa05-68a3937ff36f" >
 		<http:listener doc:name="Listener" doc:id="c42cde76-120e-474d-ae28-635cffe896a6" config-ref="HTTP_Listener_config" path="/now"/>
+		<logger level="INFO" doc:name="Logger" doc:id="89b22c95-4d7f-4432-afed-09b3097ca3f4" message="#[flow.name] has been started"/>
 		<ee:transform doc:name="Transform Message" doc:id="06d26e3d-3a91-465e-b8c7-f8de98769eca" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
