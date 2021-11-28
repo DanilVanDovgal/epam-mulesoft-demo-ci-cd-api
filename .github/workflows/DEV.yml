@@ -210,26 +210,3 @@ jobs:
             echo "Exists"
             artifactName=$(ls *.jar | head -1)
             anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application modify "${CLOUD_ENV}-${APP_NAME}" $artifactName
-      # Check is deployment
-      - name: Check status in loop
-        run: |
-            echo Script has been started
-            while :
-            do
-              response=$((anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "dev-epam-mulesoft-demo-ci-cd-api") | grep status)
-              echo $response
-              if [[ $response == *"FAILED"* ]]; then
-                echo error exit
-                exit 1
-              fi
-              if [[ $response == *"STARTED"* || $response == *"UNDEPLOYED"* ]]; then
-                echo normal exit
-                break
-              fi
-              if [[ $response == *"UNDEPLOYED"* ]]; then
-                echo start application
-                anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
-              fi 
-              sleep 10
-            done
-            echo Script has been ended
