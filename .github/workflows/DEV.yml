@@ -233,11 +233,13 @@ jobs:
               if [[ $response == *"UNDEPLOYED"* ]]; then
                 echo Application in status UNDEPLOYED, trying to start
                 anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
+                ((count++))
                 sleep 20
                 continue
               fi
               if [[ $response == *"DEPLOYING"* ]]; then
                 echo Deploying in progress
+                ((count++))
                 sleep 20
                 continue
               fi
