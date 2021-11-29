@@ -221,14 +221,20 @@ jobs:
                 echo error exit
                 exit 1
               fi
+              if [[ $response == *"UNDEPLOYED"* ]]; then
+                echo start application
+                anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
+                sleep 20
+                continue
+              fi
+              if [[ $response == *"DEPLOYING"* ]]; then
+                echo deploying in progress
+                sleep 20
+                continue
+              fi
               if [[ $response == *"STARTED"* ]]; then
                 echo normal exit
                 break
               fi
-              if [[ $response == *"UNDEPLOYED"* ]]; then
-                echo start application
-                anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
-              fi 
-              sleep 5
             done
             echo Script has been ended
