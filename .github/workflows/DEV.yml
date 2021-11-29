@@ -205,7 +205,6 @@ jobs:
             anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application deploy --workerSize $WORKER_SIZE --region $REGION --workers $WORKERS --property "property.key:${PROPERTY_KEY}" --property "env:${CLOUD_ENV}" "${CLOUD_ENV}-${APP_NAME}" $artifactName
       # Modify existing application
       - name: Application exists
-        if: "!contains(env.STATUS, 'Error')"
         run: |
             echo "Exists"
             artifactName=$(ls *.jar | head -1)
@@ -216,7 +215,7 @@ jobs:
             echo Script has been started
             while :
             do
-              response=$((anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "${CLOUD_ENV}-${APP_NAME}") | grep status)
+              response=$((anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "${CLOUD_ENV}-${APP_NAME}"))
               echo $response
               if [[ $response == *"DEPLOY_FAILED"* ]]; then
                 echo error exit
