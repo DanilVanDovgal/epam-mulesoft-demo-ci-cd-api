@@ -213,33 +213,33 @@ jobs:
       - name: Check status in loop
         run: |
             echo Script has been started
-            count=0
+            count="0"
             sleep 5
             while :
             do
               response=$(anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "${CLOUD_ENV}-${APP_NAME}")
               echo $response
-              if [[ $response == *"DEPLOY_FAILED"* && $count -eq 0 ]]; then
+              if [[ $response == *"DEPLOY_FAILED"* && $count == "0" ]]; then
                 echo Application in status DEPLOY_FAILED, trying to start
                 anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
-                ((count++))
+                count="1"
                 sleep 20
                 continue
               fi
-              if [[ $response == *"DEPLOY_FAILED"* && $count -gt 0 ]]; then
+              if [[ $response == *"DEPLOY_FAILED"* && $count == "1" ]]; then
                 echo Application deployment failed
                 exit 1
               fi
               if [[ $response == *"UNDEPLOYED"* ]]; then
                 echo Application in status UNDEPLOYED, trying to start
                 anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
-                ((count++))
+                count="1"
                 sleep 20
                 continue
               fi
               if [[ $response == *"DEPLOYING"* ]]; then
                 echo Deploying in progress
-                ((count++))
+                count="1"
                 sleep 20
                 continue
               fi

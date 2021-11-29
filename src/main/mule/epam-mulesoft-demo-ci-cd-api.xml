@@ -9,7 +9,7 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="77f5ed51-1988-4911-b303-f8d50707c69c" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
-	<db:config name="Database_Config" doc:name="Database Config" doc:id="b30f0b8c-7063-441a-82bd-32677586056c" >
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="7c658cfe-7aea-4199-8842-7590f98aa79a" >
 		<db:my-sql-connection host="test.com" port="3306" user="test" password="test" database="nodb" >
 			<reconnection failsDeployment="true" />
 		</db:my-sql-connection>
