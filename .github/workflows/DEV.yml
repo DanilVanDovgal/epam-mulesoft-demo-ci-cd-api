@@ -218,7 +218,7 @@ jobs:
             do
               response=$((anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "${CLOUD_ENV}-${APP_NAME}") | grep status)
               echo $response
-              if [[ $response == *"FAILED"* ]]; then
+              if [[ $response == *"DEPLOY_FAILED"* ]]; then
                 echo error exit
                 exit 1
               fi
