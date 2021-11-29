@@ -225,7 +225,9 @@ jobs:
                 ((count++))
                 sleep 20
                 continue
-              else
+              fi
+              if [[ $response == *"DEPLOY_FAILED"* && $count -gt 0 ]]
+              then
                 echo error exit
                 exit 1
               fi
