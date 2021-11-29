@@ -220,28 +220,29 @@ jobs:
               response=$(anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe-json "${CLOUD_ENV}-${APP_NAME}")
               echo $response
               if [[ $response == *"DEPLOY_FAILED"* && $count -eq 0 ]]; then
+                echo Application in status DEPLOY_FAILED, trying to start
                 anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
                 ((count++))
                 sleep 20
                 continue
               fi
               if [[ $response == *"DEPLOY_FAILED"* && $count -gt 0 ]]; then
-                echo stop
+                echo Application deployment failed
                 exit 1
               fi
               if [[ $response == *"UNDEPLOYED"* ]]; then
-                echo start application
+                echo Application in status UNDEPLOYED, trying to start
                 anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application start "${CLOUD_ENV}-${APP_NAME}"
                 sleep 20
                 continue
               fi
               if [[ $response == *"DEPLOYING"* ]]; then
-                echo deploying in progress
+                echo Deploying in progress
                 sleep 20
                 continue
               fi
               if [[ $response == *"STARTED"* ]]; then
-                echo start
+                echo Start
                 break
               fi
             done
