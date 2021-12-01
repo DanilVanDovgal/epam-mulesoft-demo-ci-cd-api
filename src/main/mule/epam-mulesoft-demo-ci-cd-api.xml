@@ -15,12 +15,10 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
-var dateTime = now()
 ---
 {
 	message: "ok",
-	date_time: dateTime,
-	isLeapYear: isLeapYear(dateTime)
+	date_time: now()
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
