@@ -18,7 +18,8 @@ output application/json
 ---
 {
 	message: "ok",
-	date_time: now()
+	date_time: now(),
+	corrId: correlationId
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
