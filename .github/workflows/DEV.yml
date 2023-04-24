@@ -1,4 +1,4 @@
-# This workflow will build, test and deploy a MuleSoft project
+# This workflow will build and deploy a MuleSoft project
 name: DEV CI/CD
 
 # Controls when the action will run.
@@ -12,6 +12,7 @@ on:
       - dev
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    # You can specify a list of parameters and a list of values you need in the pipeline
     inputs:
       workerSize:
         description: 'Size of worker'     
@@ -56,48 +57,99 @@ on:
         - 'eu-west-1'
         - 'eu-west-2'
 
+# The command creates environment variables and initializes with values from the GitHub secrets, repository variables
+env:
+  CLIENT_ID: ${{ secrets.CONNECTED_APP_ID }}
+  CLIENT_SECRET: ${{ secrets.CONNECTED_APP_SECRET }}
+  USERNAME: ${{ secrets.REPO_USER_NAME }}
+  PASSWORD: ${{ secrets.REPO_PASSWORD }}
+  ENV_PROPERTY_VALUE: ${{ vars.GLOBAL_PROPERTY_ENV_VALUE }}
+  ENV_PROPERTY_NAME: ${{ vars.GLOBAL_PROPERTY_ENV_NAME }}
+  PROPERTY_KEY_VALUE: ${{ secrets.DECRYPT_PROPERTY_KEY_VALUE }}
+  PROPERTY_KEY_NAME: ${{ vars.DECRYPT_PROPERTY_KEY_NAME }}
+  APP_NAME: ${{ github.event.repository.name }}
+  ANYPOINT_ID: ${{ secrets.ANYPOINT_ENV_ID }}
+  ANYPOINT_SECRET: ${{ secrets.ANYPOINT_ENV_SECRET }}
+  ANYPOINT_ENV_NAME: ${{ secrets.ANYPOINT_ENV_NAME }}
+  ORG: ${{ vars.ORG }}
+  WORKERS: ${{ github.event.inputs.workers }}
+  WORKER_SIZE: ${{ github.event.inputs.workerSize }}
+  REGION: ${{ github.event.inputs.region }}
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
   build:
    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    environment: dev
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      # Setting up a requested version of Java
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
-          java-version: '8.0'
-          distribution: 'adopt'
+          java-version: '8'
+          distribution: 'temurin'
+      # Action restores the cached files to the path ~/.m2.
       - name: Cache Maven packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-      # Create file settings.xml for maven
+      # To avoid including a settings.xml file in each repository, we can generate this file in the pipeline.
+      # Action creates file settings.xml for maven. It will create settings.xml with proper setup (repositories, servers, profiles).
+      # This file might be needed in order to fetch the private dependencies from the Mulesoft Maven private repo.
       - name: maven-settings-xml-action
-        uses: whelk-io/maven-settings-xml-action@v18
+        uses: whelk-io/maven-settings-xml-action@v20
         with:
-          repositories: '[{"id": "anypoint-exchange-v2","name": "Anypoint Exchange","url": "https://maven.anypoint.mulesoft.com/api/v2/maven","layout": "default","releases": {"enabled": "true"},"snapshots": {"enabled": "true"}}]'
-          servers: '[{"id": "anypoint-exchange-v2","username": "${username}","password": "${password}"}]'
-          profiles: '[{"id": "anypoint-exchange-v2","activation": {"activeByDefault": "true"}}]'
+          repositories: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "name": "Anypoint Exchange",
+                "url": "https://maven.anypoint.mulesoft.com/api/v3/maven",
+                "layout": "default",
+                "releases": {
+                  "enabled": "true"
+                },
+                "snapshots": {
+                  "enabled": "true"
+                }
+              }
+            ]
+          servers: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "username": "~~~Client~~~",
+                "password": "${id}~?~${secret}"
+              }
+            ]
+          profiles: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "activation": {
+                  "activeByDefault": "true"
+                }
+              }
+            ]
           output_file: .m2/settings.xml
       # Build project
       - name: Build
-        env:
-          USERNAME: ${{ secrets.username }}
-          PASSWORD: ${{ secrets.password }}
-        run: mvn -B package -file pom.xml -s .m2/settings.xml -DskipTests=true -Dusername="${USERNAME}" -Dpassword="${PASSWORD}"
+        # The command creates environment variables and initializes with values from the GitHub secrets
+        run: mvn -B package -file pom.xml -s .m2/settings.xml -DskipTests=true -Did="${CLIENT_ID}" -Dsecret="${CLIENT_SECRET}"
       # Get short commit hash
       - name: Get short commit hash
         run: echo "COMMIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
       # Save name for future package jar
       - name: Set archive name
         run: echo "ARCHIVE_NAME=${{ github.event.repository.name }}-${{ env.COMMIT_HASH }}"  >> $GITHUB_ENV
-      # Rename jar
+      # Rename artifact jar file
       - name: Artifact file name with commit hash
         run: |
           artifactName1=$(ls target/*.jar | head -1)
@@ -109,57 +161,102 @@ jobs:
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: target/*.jar
+  # This workflow contains a single job called "test"
   test:
+    # Depends on build job
     needs: build
    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    environment: dev
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache Maven packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       # Create file settings.xml for maven
       - name: maven-settings-xml-action
-        uses: whelk-io/maven-settings-xml-action@v18
+        uses: whelk-io/maven-settings-xml-action@v20
         with:
-          repositories: '[{"id": "MuleEE-Repository","name": "MuleEE-Repository","url": "https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/","layout": "default","releases": {"enabled": "true"},"snapshots": {"enabled": "true"}}]'
-          servers: '[{"id": "MuleEE-Repository","username": "${repo.userName}","password": "${repo.password}"}]'
-          profiles: '[{"id": "MuleEE-Repository","activation": {"activeByDefault": "true"}}]'
+          repositories: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "name": "Anypoint Exchange",
+                "url": "https://maven.anypoint.mulesoft.com/api/v3/maven",
+                "layout": "default",
+                "releases": {
+                  "enabled": "true"
+                },
+                "snapshots": {
+                  "enabled": "true"
+                }
+              },
+              {
+                "id": "MuleEE-Repository",
+                "name": "MuleEE-Repository",
+                "url": "https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/",
+                "layout": "default",
+                "releases": {
+                  "enabled": "true"
+                },
+                "snapshots": {
+                  "enabled": "true"
+                }
+              }
+            ]
+          servers: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "username": "~~~Client~~~",
+                "password": "${id}~?~${secret}"
+              },
+              {
+                "id": "MuleEE-Repository",
+                "username": "${repo.userName}",
+                "password": "${repo.password}"
+              }
+            ]
+          profiles: |
+            [
+              {
+                "id": "anypoint-exchange-v3",
+                "activation": {
+                  "activeByDefault": "true"
+                }
+              },
+              {
+                "id": "MuleEE-Repository",
+                "activation": {
+                  "activeByDefault": "true"
+                }
+              }
+            ]
           output_file: .m2/settings.xml
       # Runs tests
       - name: Test
-        env:
-          USERNAME: ${{ secrets.repo_user_name }}
-          PASSWORD: ${{ secrets.repo_password }}
-          ENV: dev
-          PROPERTY_KEY: ${{ secrets.property_key }}
-        run: mvn test -file pom.xml -s .m2/settings.xml -Drepo.userName="$USERNAME" -Drepo.password="$PASSWORD" -Denv="$ENV" -Dproperty.key="$PROPERTY_KEY"
+        run: |
+          mvn test \
+          -file pom.xml -s .m2/settings.xml \
+          -Drepo.userName="$USERNAME" -Drepo.password="$PASSWORD" \
+          -Did="${CLIENT_ID}" -Dsecret="${CLIENT_SECRET}" \
+          -D"$ENV_PROPERTY_NAME=$ENV_PROPERTY_VALUE" -D"$PROPERTY_KEY_NAME=$PROPERTY_KEY_VALUE" \
+  # This workflow contains a single job called "deploy"
   deploy:
+    # Depends on test job
     needs: test
+    # Run deploy job only if conditions match else skip this job
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    env:
-          USERNAME: ${{ secrets.username }}
-          PASSWORD: ${{ secrets.password }}
-          APP_NAME: ${{ github.event.repository.name }}
-          PROPERTY_KEY: ${{ secrets.property_key }}
-          CLOUD_ENV: dev
-          WORKERS: ${{ github.event.inputs.workers }}
-          WORKER_SIZE: ${{ github.event.inputs.workerSize }}
-          REGION: ${{ github.event.inputs.region }}
+    environment: dev
     steps:
-      - uses: actions/checkout@v2
-      - name: Cache Maven packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
       # Get short commit hash
       - name: Get short commit hash
         run: echo "COMMIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
@@ -171,25 +268,33 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: ${{ env.ARCHIVE_NAME }}
-      # Use node.js for Anypoint CLI
+      # Install latest node.js for Anypoint CLI
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: '15.x'
+          check-latest: true
       # Install Anypoint CLI
       - name: Install Anypoint CLI
         run: npm install -g anypoint-cli@latest
       # Checks if application exist in cloud
       - name: Run Anypoint CLI
-        run: echo "STATUS=$(echo $(anypoint-cli --username=$USERNAME --password=$PASSWORD  --organization=Home --environment=Sandbox runtime-mgr cloudhub-application describe "${CLOUD_ENV}-${APP_NAME}"))" >> $GITHUB_ENV
+        run: |
+          echo "STATUS=$(echo $( \
+          anypoint-cli \
+          --client_id=$CLIENT_ID \
+          --client_secret=$CLIENT_SECRET \
+          --organization="$ORG" \
+          --environment=$ANYPOINT_ENV_NAME \
+          runtime-mgr cloudhub-application describe-json "${ENV_PROPERTY_VALUE}-${APP_NAME}"))" >> $GITHUB_ENV
       # Log STATUS
       - name: Echo
         run: echo $STATUS
-      # Stop the process in case of 'Error: User unauthorized to access requested resource' or 'Error: Unauthorized' or 'Error: Organization not found' or 'Error: Environment not found'
+      # Checks for errors
       - name: Checks error
-        if: "contains(env.STATUS, 'Error:') && !contains(env.STATUS, 'No application with domain')"
+        if: "contains(env.STATUS, 'Error') && !contains(env.STATUS, 'No application with domain')"
         run: exit 1
-      # Checks input parameters. We need this section in case if this flow will automatically run on push operation to dev branch the first time (when this application doesn't exist in CloudHub).
+      # Checks input parameters. We need this section in case if this flow will automatically run on push operation to dev 
+      # branch the first time (when this application doesn't exist in CloudHub).
       - name: Checks input parameters
         if: github.event.inputs.workers == null || github.event.inputs.workerSize == null || github.event.inputs.region == null
         run: |
@@ -198,15 +303,32 @@ jobs:
             echo "REGION=us-east-1" >> $GITHUB_ENV
       # Deploy new application
       - name: Application doesn't exist
-        if: contains(env.STATUS, 'No application with domain')
+        # If the response from the runtime manager contains 'No application with domain' that means the application doesn't exist
+        if: "contains(env.STATUS, 'Error') && contains(env.STATUS, 'No application with domain')"
         run: |
             echo "Doesn't exist"
             artifactName=$(ls *.jar | head -1)
-            anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application deploy --workerSize $WORKER_SIZE --region $REGION --workers $WORKERS --property "property.key:${PROPERTY_KEY}" --property "env:${CLOUD_ENV}" "${CLOUD_ENV}-${APP_NAME}" $artifactName
+            anypoint-cli \
+            --client_id=$CLIENT_ID \
+            --client_secret=$CLIENT_SECRET \
+            --organization="$ORG" \
+            --environment=$ANYPOINT_ENV_NAME \
+            runtime-mgr cloudhub-application deploy \
+            --workerSize $WORKER_SIZE --region $REGION --workers $WORKERS \
+            --property "${PROPERTY_KEY_NAME}:${PROPERTY_KEY_VALUE}" \
+            --property "anypoint.platform.client_id:${ANYPOINT_ID}" \
+            --property "anypoint.platform.client_secret:${ANYPOINT_SECRET}" \
+            --property "${ENV_PROPERTY_NAME}:${ENV_PROPERTY_VALUE}" \
+            "${ENV_PROPERTY_VALUE}-${APP_NAME}" $artifactName
       # Modify existing application
       - name: Application exists
         if: "!contains(env.STATUS, 'Error')"
         run: |
             echo "Exists"
             artifactName=$(ls *.jar | head -1)
-            anypoint-cli --username=$USERNAME --password=$PASSWORD --organization=Home --environment=Sandbox runtime-mgr cloudhub-application modify "${CLOUD_ENV}-${APP_NAME}" $artifactName
+            anypoint-cli \
+            --client_id=$CLIENT_ID \
+            --client_secret=$CLIENT_SECRET \
+            --organization="$ORG" \
+            --environment=$ANYPOINT_ENV_NAME \
+            runtime-mgr cloudhub-application modify "${ENV_PROPERTY_VALUE}-${APP_NAME}" $artifactName
